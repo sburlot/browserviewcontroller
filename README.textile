@@ -1,0 +1,13 @@
+h1. BrowserViewController
+
+This code allows you to add in-app browsing of web pages. It takes care of handling all the special cases (ie links) I could think of:
+
+* *mailto:* : displays an MFMailComposeViewController and fill it with the mailto url: it handles 'to', 'cc', 'subject' and 'body'
+* *Youtube* : urls linking to "YouTube.com" are displayed in the YouTube application.
+* *maps.google.com* : urls linking to "maps.google.com" (and other country variations) are displayed in the Map application.
+* *iTunes Links* : links to song are opened in the iTunes application.
+* *AppStore links* : links to applications are opened in the AppStore application.
+
+You can customise the view, ie if you want a navigation tab bar or not.
+
+The navigation tab bar will add standard web buttons, ie Back, Forward, Stop, Reload and also a button to send the url of the current page via email, or open it in Safari.
