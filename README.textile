@@ -10,4 +10,6 @@ This code allows you to add in-app browsing of web pages. It takes care of handl
 
 You can customise the view, ie if you want a navigation tab bar or not.
 
+You can choose to ask for a confirmation before exiting the app to open YouTube, Map, Safari.
+
 The navigation tab bar will add standard web buttons, ie Back, Forward, Stop, Reload and also a button to send the url of the current page via email, or open it in Safari.
