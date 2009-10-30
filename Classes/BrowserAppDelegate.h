@@ -14,12 +14,13 @@
 @class BrowserViewController;
 
 @interface BrowserAppDelegate : NSObject <UIApplicationDelegate> {
-    UIWindow *window;
-    BrowserViewController *viewController;
+	UIWindow *window;
+	UINavigationController *navController;
+	BrowserViewController *viewController;
 }
 
 @property (nonatomic, retain) IBOutlet UIWindow *window;
-@property (nonatomic, retain) IBOutlet BrowserViewController *viewController;
+@property (nonatomic, retain) BrowserViewController *viewController;
 
 @end
 

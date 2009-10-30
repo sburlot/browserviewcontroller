@@ -13,23 +13,33 @@
 #import "BrowserAppDelegate.h"
 #import "BrowserViewController.h"
 
+#define WITH_NAV_CONTROLLER
+#define WITH_TOOLBAR
+
 @implementation BrowserAppDelegate
 
 @synthesize window;
 @synthesize viewController;
 
-
 - (void)applicationDidFinishLaunching:(UIApplication *)application
 {
 	viewController = [[BrowserViewController alloc] initWithURL:[NSURL URLWithString:@"http://www.coriolis.ch/browsertest.html"]];
-	viewController.hasToolbar = YES;
-	UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:viewController];
+#ifndef WITH_TOOLBAR
+	viewController.hasToolbar = FALSE;
+#endif
+	
+#ifdef WITH_NAV_CONTROLLER
+	navController = [[UINavigationController alloc] initWithRootViewController:viewController];
 	[window addSubview:navController.view];
+#else
+	[window addSubview:viewController.view];
+#endif
 	[window makeKeyAndVisible];
 }
 
 - (void)dealloc
 {
+	[navController release];
 	[viewController release];
 	[window release];
 	[super dealloc];

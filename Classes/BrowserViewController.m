@@ -11,6 +11,9 @@
 
 #import "BrowserViewController.h"
 
+#define ACTION_SENDLINK 1
+#define ACTION_OPEN_EXTERNAL 2
+
 // From Joe Hewitt Three20
 // http://github.com/joehewitt/three20
 
@@ -47,9 +50,11 @@
 @synthesize webView;
 @synthesize toolbar;
 @synthesize currentURL;
+@synthesize externalURL;
 @synthesize hasToolbar;
 @synthesize canOpenSafari;
 @synthesize canRotateLandscape;
+@synthesize confirmBeforeExiting;
 
 //==========================================================================================
 - (id) initWithURL:(NSURL *)_baseURL
@@ -59,6 +64,7 @@
 		self.hasToolbar = TRUE;
 		self.canOpenSafari = TRUE;
 		self.canRotateLandscape = TRUE;
+		self.confirmBeforeExiting = TRUE;
 		[[Reachability sharedReachability] setHostName:[_baseURL host]];
 	}
 	return self;
@@ -146,6 +152,7 @@
 	MARK;
 	NSURLRequest *req = [NSURLRequest requestWithURL:currentURL];
 	[webView loadRequest:req];
+//	[self showLoadingView];
 	[super viewDidLoad];
 }
 
@@ -194,6 +201,7 @@
 {
 	self.webView = nil;
 	self.currentURL = nil;
+	self.externalURL = nil;
 	self.toolbar = nil;
 	[super dealloc];
 }
@@ -229,11 +237,20 @@
 - (void)sendOrOpenCurrentPage
 {
 	UIActionSheet *actionSheet;
-	actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Web Browser", nil)
-																						delegate:self 
-																	 cancelButtonTitle:NSLocalizedString(@"Cancel", nil)
-															destructiveButtonTitle:nil
-																	 otherButtonTitles:NSLocalizedString(@"Open with Safari", nil), NSLocalizedString(@"Send link via Email", nil), nil];
+	if (canOpenSafari) {
+		actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Web Browser", nil)
+																							delegate:self 
+																		 cancelButtonTitle:NSLocalizedString(@"Cancel", nil)
+																destructiveButtonTitle:nil
+																		 otherButtonTitles:NSLocalizedString(@"Open with Safari", nil), NSLocalizedString(@"Send link via Email", nil), nil];
+	} else {
+		actionSheet = [[UIActionSheet alloc] initWithTitle:NSLocalizedString(@"Web Browser", nil)
+																							delegate:self 
+																		 cancelButtonTitle:NSLocalizedString(@"Cancel", nil)
+																destructiveButtonTitle:nil
+																		 otherButtonTitles:NSLocalizedString(@"Send link via Email", nil), nil];
+	}
+	actionSheet.tag = ACTION_SENDLINK;
 	actionSheet.actionSheetStyle = UIActionSheetStyleBlackTranslucent;
 	[actionSheet showInView:self.view];
 	[actionSheet release];
@@ -265,22 +282,47 @@
 }
 
 //==========================================================================================
+#pragma mark UIAlertView delegate
+//==========================================================================================
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex
+{
+	if (buttonIndex == 1)
+			[self openExternalURL:externalURL];
+}
+
+//==========================================================================================
 #pragma mark ActionSheet delegate
 //==========================================================================================
 -(void)actionSheet:(UIActionSheet*)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex;
 {
-	switch (buttonIndex) {
-		case 0:	// Ouvrir dans Safari
-			[[UIApplication sharedApplication] openURL:self.currentURL];
+	switch (actionSheet.tag) {
+		case ACTION_SENDLINK:
+			if (canOpenSafari) {
+				switch (buttonIndex) {
+					case 0:	// Ouvrir dans Safari
+						[[UIApplication sharedApplication] openURL:self.currentURL];
+						break;
+					case 1:	// Envoyer par email
+						[self sendEmailWithSubject:@"" body:[currentURL absoluteString] to:@"" cc:@""];
+						break;
+					case 2: // Cancel
+						break;
+				}
+			} else {
+					switch (buttonIndex) {
+						case 0:	// Envoyer par email
+							[self sendEmailWithSubject:@"" body:[currentURL absoluteString] to:@"" cc:@""];
+							break;
+						case 1: // Cancel
+							break;
+					}
+			}
 			break;
-		case 1:	// Envoyer par email
-			[self sendEmailWithSubject:@"" body:[currentURL absoluteString] to:@"" cc:@""];
-			break;
-		case 2: // Cancel
+		case ACTION_OPEN_EXTERNAL:
 			break;
 	}
 }
-
+	
 //==========================================================================================
 #pragma mark Mail stuff
 //==========================================================================================
@@ -323,7 +365,7 @@
 	[picker setCcRecipients:[NSArray arrayWithObject:ccPerson]];
 	[picker setSubject:subject];
 	
-	[picker setMessageBody:[body stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding] isHTML:NO];
+	[picker setMessageBody:body isHTML:NO];
 	
 	picker.navigationBar.tintColor = [UIColor blackColor];
 	
@@ -357,7 +399,7 @@
 	if (alertMessage != nil) {
 		UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Sending Email", nil) 
 																										message:alertMessage 
-																									 delegate:self 
+																									 delegate:nil 
 																					cancelButtonTitle:NSLocalizedString(@"OK", nil)
 																					otherButtonTitles:nil,nil];
 		[alert show];
@@ -369,7 +411,6 @@
 //==========================================================================================
 - (void) sendMailWithURL:(NSURL *)url
 {
-	
 	// method to split an url "mailto:sburlot@coriolis.ch?cc=info@coriolis.ch&subject=Hello%20From%20iPhone&body=The message's first paragraph.%0A%0aSecond paragraph.%0A%0AThird Paragraph."
 	// into separate elements
 
@@ -391,13 +432,13 @@
 				NSArray *queryElements = [queryItem componentsSeparatedByString:@"="];
 				CMLog(@"queryElements: %@", queryElements);
 				if ([[queryElements objectAtIndex:0] isEqualToString:@"to"])
-					toPerson = [queryElements objectAtIndex:1];
+					toPerson = [[queryElements objectAtIndex:1] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
 				if ([[queryElements objectAtIndex:0] isEqualToString:@"cc"])
-					ccPerson = [queryElements objectAtIndex:1];
+					ccPerson = [[queryElements objectAtIndex:1] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
 				if ([[queryElements objectAtIndex:0] isEqualToString:@"subject"])
-					subject = [queryElements objectAtIndex:1];
+					subject = [[queryElements objectAtIndex:1] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
 				if ([[queryElements objectAtIndex:0] isEqualToString:@"body"])
-					body = [queryElements objectAtIndex:1];
+					body = [[queryElements objectAtIndex:1] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
 			}
 		}
 	} else {
@@ -417,10 +458,11 @@
 // https://developer.apple.com/iphone/library/qa/qa2008/qa1629.html
 //==========================================================================================
 // Process a LinkShare/TradeDoubler/DGM URL to something iPhone can handle
-- (void)openExternalURL:(NSURL *)externalURL
+- (void)openExternalURL:(NSURL *)_externalURL
 {
+	self.currentURL = _externalURL;
 	[self performSelector:@selector(showLoadingView) withObject:nil afterDelay:0.2];
-	NSURLConnection *conn = [[NSURLConnection alloc] initWithRequest:[NSURLRequest requestWithURL:externalURL] 
+	NSURLConnection *conn = [[NSURLConnection alloc] initWithRequest:[NSURLRequest requestWithURL:_externalURL] 
 																													delegate:self 
 																									startImmediately:YES];
 	[conn release];
@@ -430,7 +472,8 @@
 // Save the most recent URL in case multiple redirects occur
 - (NSURLRequest *)connection:(NSURLConnection *)connection willSendRequest:(NSURLRequest *)request redirectResponse:(NSURLResponse *)response
 {
-	self.currentURL = [response URL];
+	if (response)
+		self.currentURL = [response URL];
 	return request;
 }
 
@@ -442,10 +485,27 @@
 }
 
 //==========================================================================================
+- (void) confirmBeforeOpeningURL:(NSURL *)_externalURL withMessage:(NSString *)msg
+{
+	self.externalURL = _externalURL;
+	if (confirmBeforeExiting) {
+		UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Warning", nil)
+																										message:msg
+																									 delegate:self 
+																					cancelButtonTitle:NSLocalizedString(@"Cancel", nil) 
+																					otherButtonTitles:NSLocalizedString(@"OK", nil), nil];
+		[alert show];
+		[alert release];
+	} else {
+		[self openExternalURL:_externalURL];
+	}
+}
+
+//==========================================================================================
 - (void) showLoadingView
 {
 	MARK;
-	UIView *loadingView = [[UIView alloc] initWithFrame:self.view.frame];
+	UIView *loadingView = [[UIView alloc] initWithFrame:self.view.bounds];
 	loadingView.tag = LOADINGVIEW_TAG;
 	loadingView.alpha = 0.8;
 	loadingView.opaque = NO;
@@ -471,7 +531,6 @@
 	MARK;
 	
 	NSURL *url = [req URL];
-	CMLog(@"request: %@, url: %@, %@, %@, %@", req, [url scheme], [url absoluteString], [url resourceSpecifier], [url query]);
 
 	if ([[url scheme] isEqualToString:@"mailto"]) {
 		[self sendMailWithURL:url];
@@ -479,15 +538,22 @@
 	}
 	
 	if ([[url host] isEqualToString:@"phobos.apple.com"] || [[url host] isEqualToString:@"itunes.apple.com"]) {
-		[self openExternalURL:url];
+		[self confirmBeforeOpeningURL:url withMessage:NSLocalizedString(@"You are opening iTunes", nil)];
 		return NO;
 	}
 	
-	if (([[url host] rangeOfString:@"youtube.com"].location != NSNotFound) || ([[url host] rangeOfString:@"maps.google."].location != NSNotFound)) {
-		[[UIApplication sharedApplication] openURL: url];
+	if ([[url host] rangeOfString:@"youtube.com"].location != NSNotFound) {
+		[self confirmBeforeOpeningURL:url withMessage:NSLocalizedString(@"You are opening YouTube", nil)];
+//		[[UIApplication sharedApplication] openURL: url];
 		return NO;
 	}
 
+	if ([[url host] rangeOfString:@"maps.google."].location != NSNotFound) {
+		[self confirmBeforeOpeningURL:url withMessage:NSLocalizedString(@"You are opening Map", nil)];
+		//		[[UIApplication sharedApplication] openURL: url];
+		return NO;
+	}
+	
 	if (navigationType == UIWebViewNavigationTypeLinkClicked) {
 		[[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:YES];
 	}

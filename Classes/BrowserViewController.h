@@ -30,23 +30,27 @@
 @end
 
 
-@interface BrowserViewController : UIViewController <UIWebViewDelegate, MFMailComposeViewControllerDelegate, UIActionSheetDelegate> {
+@interface BrowserViewController : UIViewController <UIWebViewDelegate, MFMailComposeViewControllerDelegate, UIActionSheetDelegate, UIAlertViewDelegate> {
 	UIWebView *webView;
 	NSURL *currentURL;
 	UIToolbar *toolbar;
+	NSURL *externalURL;
 	
-	BOOL hasToolbar;
-	BOOL canOpenSafari;
-	BOOL canRotateLandscape;
+	BOOL hasToolbar;		// do we need a toolbar, safari like?
+	BOOL canOpenSafari;	// can we open the current page in Safari?
+	BOOL canRotateLandscape;	// can we rotate?
+	BOOL confirmBeforeExiting;	// need confirmation before exiting the app?
 
 }
 
 @property (nonatomic, retain) UIWebView *webView;
 @property (nonatomic, retain) UIToolbar *toolbar;
 @property (nonatomic, retain) NSURL *currentURL;
+@property (nonatomic, retain) NSURL *externalURL;
 @property (nonatomic, assign) BOOL hasToolbar;
 @property (nonatomic, assign) BOOL canOpenSafari;
 @property (nonatomic, assign) BOOL canRotateLandscape;
+@property (nonatomic, assign) BOOL confirmBeforeExiting;
 
 - (id) initWithURL:(NSURL *)_baseUrl;
 
@@ -57,6 +61,7 @@
 - (void) sendOrOpenCurrentPage;
 - (void) fixToolbarButtons;
 - (void) sendEmailWithSubject:(NSString *)subject body:(NSString *)body to:(NSString *)toPerson cc:(NSString *)ccPerson;
+- (void) confirmBeforeOpeningURL:(NSURL *)externalURL withMessage:(NSString *)msg;
 - (void) openExternalURL:(NSURL *)externalURL;
 - (void) showLoadingView;
 
