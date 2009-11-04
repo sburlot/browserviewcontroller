@@ -4,8 +4,8 @@
 //
 //  Created by Stephan Burlot, Coriolis Technologies, http://www.coriolis.ch on 29.10.09.
 //
-// This work is licensed under the Creative Commons GNU General Public License License.
-// To view a copy of this license, visit http://creativecommons.org/licenses/GPL/2.0/
+// This work is licensed under the Creative Commons Attribution License.
+// To view a copy of this license, visit http://creativecommons.org/licenses/by/3.0/
 // or send a letter to Creative Commons, 171 Second Street, Suite 300, San Francisco, California, 94105, USA.
 //
 
@@ -366,9 +366,7 @@
 	[picker setSubject:subject];
 	
 	[picker setMessageBody:body isHTML:NO];
-	
-	picker.navigationBar.tintColor = [UIColor blackColor];
-	
+		
 	[self presentModalViewController:picker animated:YES];
 	[picker release];
 }
@@ -524,6 +522,24 @@
 }
 
 //==========================================================================================
+- (void) showYouTubeVideoInline:(NSURL *)url
+{
+	NSString *embedHTML = @"<html><head><style type=\"text/css\">\
+	body { background-color: transparent;color: white; }\
+	</style></head>\
+	<body style=\"margin:0\">\
+	<embed id=\"yt\" src=\"%@\" type=\"application/x-shockwave-flash\" width=\"460.0f\" height=\"320.0f\"></embed>\
+	</body></html>";
+//	<media:content url='http://www.youtube.com/v/8aYQ_wjmriQ' type='application/x-shockwave-flash' medium='video' isDefault='true' expression='full' yt:format='6'/>
+	// http://code.google.com/apis/youtube/2.0/reference.html#youtube_data_api_tag_media:content
+	// http://gdata.youtube.com/feeds/api/videos/oHg5SJYRHA0?alt=json
+	// http://gdata.youtube.com/feeds/api/videos/oHg5SJYRHA0?alt=json
+	NSString *html = [NSString stringWithFormat:embedHTML, [url absoluteString]]; 
+	[webView loadHTMLString:html baseURL:nil];
+	CMLog(@"loaded");
+}
+
+//==========================================================================================
 #pragma mark UIWebView delegates
 //==========================================================================================
 - (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)req navigationType:(UIWebViewNavigationType)navigationType
@@ -544,7 +560,6 @@
 	
 	if ([[url host] rangeOfString:@"youtube.com"].location != NSNotFound) {
 		[self confirmBeforeOpeningURL:url withMessage:NSLocalizedString(@"You are opening YouTube", nil)];
-//		[[UIApplication sharedApplication] openURL: url];
 		return NO;
 	}
 
